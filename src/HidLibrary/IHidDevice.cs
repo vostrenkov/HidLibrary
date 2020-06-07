@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 
 namespace HidLibrary
 {
-    public delegate void InsertedEventHandler();
-    public delegate void RemovedEventHandler();
+    public delegate void InsertedEventHandler(HidDevice hd);
+    public delegate void RemovedEventHandler(HidDevice hd);
 
     public enum DeviceMode
     {
@@ -67,7 +67,7 @@ namespace HidLibrary
 
         bool ReadFeatureData(out byte[] data, byte reportId = 0);
 
-        bool ReadProduct(out byte[] data);
+        string ReadProduct();
 
         bool ReadManufacturer(out byte[] data);
 

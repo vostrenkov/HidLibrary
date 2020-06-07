@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,6 +13,7 @@ namespace HidLibrary
 
         private readonly string _description;
         private readonly string _devicePath;
+        private readonly string _deviceProduct;
         private readonly HidDeviceAttributes _deviceAttributes;
 
         private readonly HidDeviceCapabilities _deviceCapabilities;
@@ -42,6 +44,7 @@ namespace HidLibrary
 
                 _deviceAttributes = GetDeviceAttributes(hidHandle);
                 _deviceCapabilities = GetDeviceCapabilities(hidHandle);
+                _deviceProduct = ReadProductString();
 
                 CloseDeviceIO(hidHandle);
             }
@@ -251,19 +254,19 @@ namespace HidLibrary
             return success;
         }
 
-        public bool ReadProduct(out byte[] data)
+        private string ReadProductString()
         {
-            data = new byte[254];
+            byte[] data = new byte[254];
             IntPtr hidHandle = IntPtr.Zero;
             bool success = false;
             try
             {
-                if (IsOpen)
+                if (IsOpen && IsConnected)
                     hidHandle = ReadHandle;
                 else
                     hidHandle = OpenDeviceIO(_devicePath, NativeMethods.ACCESS_NONE);
 
-                success = NativeMethods.HidD_GetProductString(hidHandle, ref data[0], data.Length);
+                success = NativeMethods.HidD_GetProductString(hidHandle, ref data[0], data.Length);   
             }
             catch (Exception exception)
             {
@@ -275,7 +278,12 @@ namespace HidLibrary
                     CloseDeviceIO(hidHandle);
             }
 
-            return success;
+            return Encoding.Unicode.GetString(data).TrimEnd('\0');
+        }
+
+        public string ReadProduct()
+        {
+            return _deviceProduct;
         }
 
         public bool ReadManufacturer(out byte[] data)
@@ -718,13 +726,13 @@ namespace HidLibrary
         private void DeviceEventMonitorInserted()
         {
             if (!IsOpen) OpenDevice(_deviceReadMode, _deviceWriteMode, _deviceShareMode);
-            if (Inserted != null) Inserted();
+            if (Inserted != null) Inserted(this);
         }
 
         private void DeviceEventMonitorRemoved()
         {
             if (IsOpen) CloseDevice();
-            if (Removed != null) Removed();
+            if (Removed != null) Removed(this);
         }
 
         public void Dispose()
@@ -732,5 +740,6 @@ namespace HidLibrary
             if (MonitorDeviceEvents) MonitorDeviceEvents = false;
             if (IsOpen) CloseDevice();
         }
+
     }
 }
